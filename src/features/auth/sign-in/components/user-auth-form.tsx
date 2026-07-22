@@ -1,4 +1,5 @@
 import { useState } from 'react'
+
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -24,10 +25,6 @@ const formSchema = z.object({
   email: z.email({
     error: (iss) => (iss.input === '' ? 'Please enter your email.' : undefined),
   }),
-  password: z
-    .string()
-    .min(1, 'Please enter your password.')
-    .min(7, 'Password must be at least 7 characters long.'),
 })
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
@@ -45,41 +42,48 @@ export function UserAuthForm({
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
+   defaultValues: {
+  email: '',
+},
   })
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
+  async function onSubmit(data: z.infer<typeof formSchema>) {
+  try {
     setIsLoading(true)
 
-    toast.promise(sleep(2000), {
-      loading: 'Signing in...',
-      success: () => {
-        setIsLoading(false)
-
-        // Mock successful authentication with expiry computed at success time
-        const mockUser = {
-          accountNo: 'ACC001',
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/auth/login`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           email: data.email,
-          role: ['user'],
-          exp: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
-        }
+        }),
+      }
+    )
 
-        // Set user and access token
-        auth.setUser(mockUser)
-        auth.setAccessToken('mock-access-token')
+    const result = await response.json()
 
-        // Redirect to the stored location or default to dashboard
-        const targetPath = redirectTo || '/'
-        navigate({ to: targetPath, replace: true })
+    if (result.success) {
+      localStorage.setItem('token', result.token)
 
-        return `Welcome back, ${data.email}!`
-      },
-      error: 'Error',
-    })
+      toast.success('OTP sent successfully')
+
+      navigate({
+        to: '/otp',
+      })
+    } else {
+      toast.error('Login failed')
+    }
+  } catch (error) {
+    console.error(error)
+    toast.error('Something went wrong')
+  } finally {
+    setIsLoading(false)
   }
+}
 
   return (
     <Form {...form}>
