@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate } from '@tanstack/react-router'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -36,27 +36,57 @@ export function OtpForm({ className, ...props }: OtpFormProps) {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { otp: '' },
+    defaultValues: {
+      otp: '',
+    },
   })
 
-  // eslint-disable-next-line react-hooks/incompatible-library
   const otp = form.watch('otp')
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
-    setIsLoading(true)
-    showSubmittedData(data)
+  async function onSubmit(data: z.infer<typeof formSchema>) {
+    try {
+      setIsLoading(true)
 
-    setTimeout(() => {
+      const token = localStorage.getItem('token')
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/auth/verify-otp`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: token || '',
+          },
+          body: JSON.stringify({
+            otp: data.otp,
+          }),
+        }
+      )
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast.success('Verification successful')
+
+        navigate({
+          to: '/',
+        })
+      } else {
+        toast.error('Invalid verification code')
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error('Something went wrong')
+    } finally {
       setIsLoading(false)
-      navigate({ to: '/' })
-    }, 1000)
+    }
   }
 
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-2', className)}
+        className={cn('grid gap-5', className)}
         {...props}
       >
         <FormField
@@ -64,35 +94,46 @@ export function OtpForm({ className, ...props }: OtpFormProps) {
           name='otp'
           render={({ field }) => (
             <FormItem>
-              <FormLabel className='sr-only'>One-Time Password</FormLabel>
+              <FormLabel>Verification Code</FormLabel>
+
               <FormControl>
                 <InputOTP
-                  maxLength={6}
-                  {...field}
-                  containerClassName='justify-between sm:[&>[data-slot="input-otp-group"]>div]:w-12'
-                >
+  maxLength={6}
+  {...field}
+  containerClassName="mx-auto flex justify-center gap-2 sm:[&>[data-slot='input-otp-group']>div]:w-12"
+>
                   <InputOTPGroup>
                     <InputOTPSlot index={0} />
                     <InputOTPSlot index={1} />
                   </InputOTPGroup>
+
                   <InputOTPSeparator />
+
                   <InputOTPGroup>
                     <InputOTPSlot index={2} />
                     <InputOTPSlot index={3} />
                   </InputOTPGroup>
+
                   <InputOTPSeparator />
+
                   <InputOTPGroup>
                     <InputOTPSlot index={4} />
                     <InputOTPSlot index={5} />
                   </InputOTPGroup>
                 </InputOTP>
               </FormControl>
+
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button className='mt-2' disabled={otp.length < 6 || isLoading}>
-          Verify
+
+        <Button
+          type='submit'
+          className='w-full'
+          disabled={otp.length < 6 || isLoading}
+        >
+          {isLoading ? 'Verifying...' : 'Verify'}
         </Button>
       </form>
     </Form>

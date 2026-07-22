@@ -11,6 +11,7 @@ import { Button } from '../ui/button'
 
 export function AppTitle() {
   const { setOpenMobile } = useSidebar()
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -25,9 +26,15 @@ export function AppTitle() {
               onClick={() => setOpenMobile(false)}
               className='grid flex-1 text-start text-sm leading-tight'
             >
-              <span className='truncate font-bold'>Shadcn-Admin</span>
-              <span className='truncate text-xs'>Vite + ShadcnUI</span>
+              <span className='truncate font-bold text-primary'>
+                Authly
+              </span>
+
+              <span className='truncate text-xs'>
+                Secure Authentication
+              </span>
             </Link>
+
             <ToggleSidebar />
           </div>
         </SidebarMenuButton>
